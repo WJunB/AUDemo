@@ -63,19 +63,7 @@ extern NSMutableArray *audioQueue;
 }
 
 -(void)SendPack:(NSData*) data isServer:(BOOL)flag{
-    //    if (socketcomm == nil) {
-    //        [socketcomm reConnect];
-    //    }
-//    if (flag) {
-//
-//    }
-//    else if (udp->isGetPeer){
-//        [sock  sendMsg:data toHost:udp->peerIp port:udp->peerPort];
-////                [sock  sendMsg:data toHost:udp->peerIp port:UDP_LOCAL_PORT];
-//    }
-//    else{
-//        NSLog(@"对方服务器地址为空！");
-//    }
+
 
     [sock  sendMsg:data toHost:UDP_REMOTE_IP port:UDP_REMOTE_PORT];
 }
@@ -93,9 +81,14 @@ extern NSMutableArray *audioQueue;
 //    memcpy(Gbuffer+currentDataSize, charData, size);
 //    
 //    free(charData);
-    [audioQueue addObject:data];
+//    [audioQueue addObject:data];
+    struct UDP_VIDEO_PACK *pack = (UDP_VIDEO_PACK*)malloc(sizeof(UDP_VIDEO_PACK));
+    //        pack.type = PENTRATE;
+    [data getBytes:pack length:sizeof(UDP_VIDEO_PACK)];
     
-    
+    [udp DealWithAVPack:pack];
+    free(pack);
+
     
 //    if (currentDataSize>35000&&!start) {
 //        AQSController   *aqc2 =[AQSController alloc];
@@ -189,6 +182,7 @@ extern NSMutableArray *audioQueue;
 -(void)OnRecvAudioByData:(NSData*)data{
     struct UDP_VIDEO_PACK *pack = (struct UDP_VIDEO_PACK*)malloc(sizeof(struct UDP_VIDEO_PACK));
     [data getBytes:pack length:sizeof(struct UDP_VIDEO_PACK)];
+
     if (pack->frame_len<=0 || pack->data_len<=0){
         free(pack);
         return;
@@ -258,7 +252,7 @@ extern NSMutableArray *audioQueue;
                 [point setDatalen:AArray[udp->currentFrameID % AUDIOMAXCACHE].datalen];
                 [point AddData:AArray[udp->currentFrameID % AUDIOMAXCACHE].data len:AArray[udp->currentFrameID % AUDIOMAXCACHE].datalen];
     //            @synchronized(udp->AudioQueue) {
-                    [udp->AudioQueue addObject:point];
+                    [audioQueue addObject:point];
     //                NSSortDescriptor *sortDes = [NSSortDescriptor sortDescriptorWithKey:@"frame_id" ascending:YES];
     //                [udp->AudioQueue sortUsingDescriptors:[NSMutableArray arrayWithObject:sortDes]];
     //            }
@@ -325,7 +319,7 @@ extern NSMutableArray *audioQueue;
                 [point setDatalen:AArray[udp->currentFrameID % AUDIOMAXCACHE].datalen];
                 [point AddData:AArray[udp->currentFrameID % AUDIOMAXCACHE].data len:AArray[udp->currentFrameID % AUDIOMAXCACHE].datalen];
     //            @synchronized(udp->AudioQueue) {
-                    [udp->AudioQueue addObject:point];
+                    [audioQueue addObject:point];
     //                NSSortDescriptor *sortDes = [NSSortDescriptor sortDescriptorWithKey:@"frame_id" ascending:YES];
     //                [udp->AudioQueue sortUsingDescriptors:[NSMutableArray arrayWithObject:sortDes]];
     ////            }
@@ -388,7 +382,7 @@ extern NSMutableArray *audioQueue;
             [point AddData:AArray[pack->frame_id % AUDIOMAXCACHE].data len:AArray[pack->frame_id % AUDIOMAXCACHE].datalen];
     //        @synchronized(udp->AudioQueue) {
 
-                [udp->AudioQueue addObject:point];
+                [audioQueue addObject:point];
     //            NSSortDescriptor *sortDes = [NSSortDescriptor sortDescriptorWithKey:@"frame_id" ascending:YES];
     //            [udp->AudioQueue sortUsingDescriptors:[NSMutableArray arrayWithObject:sortDes]];
     //        }
@@ -404,11 +398,11 @@ extern NSMutableArray *audioQueue;
 //        [thread start];
 //        hasBegin = YES;
 //    }
-    if ([udp->AudioQueue count] >3*AUDIOMAXCACHE) {
-        dispatch_semaphore_signal(udp->sempahore);
-//        dispatch_semaphore_wait(udp->sempahoreend,DISPATCH_TIME_FOREVER);
-    }
-    NSLog(@"audioqueue-----%d",[udp->AudioQueue count]);
+//    if ([udp->AudioQueue count] >3*AUDIOMAXCACHE) {
+//        dispatch_semaphore_signal(udp->sempahore);
+////        dispatch_semaphore_wait(udp->sempahoreend,DISPATCH_TIME_FOREVER);
+//    }
+//    NSLog(@"audioqueue-----%d",[audioQueue count]);
     free(pack);
     return;
     
@@ -575,31 +569,20 @@ extern NSMutableArray *audioQueue;
         if (i==numpack-1) {
             memcpy(pack->data, file + i*PACK_SIZE, size - PACK_SIZE*(numpack - 1));
             pack->data_len = size%PACK_SIZE;
-            
+            if(pack->data_len == 0){
+                pack->data_len = PACK_SIZE;
+            }
         }
         else{
             memcpy(pack->data, file + i*PACK_SIZE, PACK_SIZE);
             pack->data_len = PACK_SIZE;
         }
-        
+
         //文件写入
-        if(isPentrate){
+
             NSData *mydata = [[NSData alloc]initWithBytes:pack length:(sizeof(struct UDP_VIDEO_PACK))];
-            [udp SendPack:mydata isServer:!isPentrate];
-        }
-        else{
-            struct UDP_FORWARD_PACK *fpack = (struct UDP_FORWARD_PACK*)malloc(sizeof(struct UDP_FORWARD_PACK));
-            ZeroMemory(fpack, sizeof(struct UDP_FORWARD_PACK));
-            fpack->flag = FOWARD_FLAG;
-            memcpy(&fpack->addr, peerAddr, sizeof(struct mysockaddr));
-            memcpy(fpack->data, pack, sizeof(struct UDP_VIDEO_PACK));
-            
-            fpack->len = sizeof(struct UDP_FORWARD_PACK);
-            NSData *mydata = [[NSData alloc]initWithBytes:fpack length:(sizeof(struct UDP_FORWARD_PACK))];
-            free(fpack);
-            
-            [udp SendPack:mydata isServer:!isPentrate];
-        }
+            [udp SendPack:mydata isServer:YES];
+        
         
         
     }

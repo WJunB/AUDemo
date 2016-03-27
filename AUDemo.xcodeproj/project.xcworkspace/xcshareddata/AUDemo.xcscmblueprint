@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "8C690DC920D42EB280BBFEE8F5895C85EBEB61B3",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "8C690DC920D42EB280BBFEE8F5895C85EBEB61B3" : 0,
+    "92645AC285E3D0FBBE18D5B6EB7648A4F865A849" : 0
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "D87FD874-9600-4E2D-9C98-BF4A664074E1",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "8C690DC920D42EB280BBFEE8F5895C85EBEB61B3" : "AUDemo\/",
+    "92645AC285E3D0FBBE18D5B6EB7648A4F865A849" : ".."
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "AUDemo",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "AUDemo.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/WJunB\/AUDemo.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "8C690DC920D42EB280BBFEE8F5895C85EBEB61B3"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "github.com:WJunB\/AQDemo.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "92645AC285E3D0FBBE18D5B6EB7648A4F865A849"
+    }
+  ]
+}

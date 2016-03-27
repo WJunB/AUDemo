@@ -30,11 +30,11 @@
                                 <color key="textColor" cocoaTouchSystemColor="darkTextColor"/>
                                 <nil key="highlightedColor"/>
                             </label>
-                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="jKj-tG-8nj">
-                                <rect key="frame" x="187" y="405" width="30" height="30"/>
-                                <state key="normal" title="play"/>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Fpa-mu-LCb">
+                                <rect key="frame" x="183" y="420" width="62" height="30"/>
+                                <state key="normal" title="method2"/>
                                 <connections>
-                                    <action selector="touchPlay:" destination="BYZ-38-t0r" eventType="touchUpInside" id="eCQ-YJ-j6F"/>
+                                    <action selector="method:" destination="BYZ-38-t0r" eventType="touchUpInside" id="kvD-3u-NWj"/>
                                 </connections>
                             </button>
                         </subviews>

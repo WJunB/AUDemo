@@ -21,6 +21,7 @@
 		BF9610E71C97CB7900504A25 /* udpsocket.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF9610E31C97CB7900504A25 /* udpsocket.mm */; };
 		BF9610F31C97CF7600504A25 /* InMemoryAudioFile.mm in Sources */ = {isa = PBXBuildFile; fileRef = BF9610F11C97CF7600504A25 /* InMemoryAudioFile.mm */; };
 		BF9610F51C97D03700504A25 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF9610F41C97D03700504A25 /* AudioToolbox.framework */; };
+		BFEFEF691CA13D54009B9DA7 /* AudioController.mm in Sources */ = {isa = PBXBuildFile; fileRef = BFEFEF681CA13D54009B9DA7 /* AudioController.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,6 +69,8 @@
 		BF9610F11C97CF7600504A25 /* InMemoryAudioFile.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = InMemoryAudioFile.mm; path = AUDemo/Classes/InMemoryAudioFile.mm; sourceTree = "<group>"; };
 		BF9610F21C97CF7600504A25 /* InMemoryAudioFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InMemoryAudioFile.h; path = AUDemo/Classes/InMemoryAudioFile.h; sourceTree = "<group>"; };
 		BF9610F41C97D03700504A25 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		BFEFEF671CA13D54009B9DA7 /* AudioController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AudioController.h; path = AUDemo/audiounit/AudioController.h; sourceTree = "<group>"; };
+		BFEFEF681CA13D54009B9DA7 /* AudioController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AudioController.mm; path = AUDemo/audiounit/AudioController.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +104,7 @@
 			children = (
 				BF9610F41C97D03700504A25 /* AudioToolbox.framework */,
 				BF9610DB1C97CB4000504A25 /* gcd */,
+				BFEFEF661CA13D10009B9DA7 /* audiounit */,
 				BF9610DA1C97CB3600504A25 /* class */,
 				BF9610A61C97CB2900504A25 /* AUDemo */,
 				BF9610C01C97CB2A00504A25 /* AUDemoTests */,
@@ -183,6 +187,15 @@
 				BF9610E31C97CB7900504A25 /* udpsocket.mm */,
 			);
 			name = gcd;
+			sourceTree = "<group>";
+		};
+		BFEFEF661CA13D10009B9DA7 /* audiounit */ = {
+			isa = PBXGroup;
+			children = (
+				BFEFEF671CA13D54009B9DA7 /* AudioController.h */,
+				BFEFEF681CA13D54009B9DA7 /* AudioController.mm */,
+			);
+			name = audiounit;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -322,6 +335,7 @@
 				BF9610E61C97CB7900504A25 /* SocketComm.m in Sources */,
 				BF9610AF1C97CB2900504A25 /* RootViewController.m in Sources */,
 				BF9610AC1C97CB2900504A25 /* AppDelegate.m in Sources */,
+				BFEFEF691CA13D54009B9DA7 /* AudioController.mm in Sources */,
 				BF9610A91C97CB2900504A25 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -548,6 +562,7 @@
 				BF9610D31C97CB2A00504A25 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		BF9610D41C97CB2A00504A25 /* Build configuration list for PBXNativeTarget "AUDemoTests" */ = {
 			isa = XCConfigurationList;
@@ -556,6 +571,7 @@
 				BF9610D61C97CB2A00504A25 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		BF9610D71C97CB2A00504A25 /* Build configuration list for PBXNativeTarget "AUDemoUITests" */ = {
 			isa = XCConfigurationList;
@@ -564,6 +580,7 @@
 				BF9610D91C97CB2A00504A25 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

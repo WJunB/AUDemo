@@ -10,10 +10,13 @@
 
 #import "RootViewController.h"
 #import "udpsocket.h"
-
-#define kChannels   2
+#import "package.h"
+#define BUFFER_SIZE 2048
+#define kChannels   1
 #define kOutputBus  0
 #define kInputBus   1
+#define krOutputBus 2
+#define krInputBus  3
 
 extern udpsocket *udp;
 extern NSMutableArray *audioQueue;
@@ -21,7 +24,10 @@ extern NSMutableArray *audioQueue;
 @interface RootViewController ()
 @end
 
+
 @implementation RootViewController
+@synthesize frame_id;
+
 - (id)init
 {
     self = [super init];
@@ -29,6 +35,7 @@ extern NSMutableArray *audioQueue;
         isRecording=FALSE;
         isPlaying=FALSE;
         flag = FALSE;
+        frame_id = 0;
     }
     return self;
 }
@@ -94,7 +101,7 @@ OSStatus recordCallback(void                                        *inRefCon,
                         UInt32                            inBusNumber,
                         UInt32                            inNumberFrames,
                         AudioBufferList                   *ioData){
-    printf("record::%ld,",inNumberFrames);
+    printf("record::%u,",(unsigned int)inNumberFrames);
     //double timeInSeconds = inTimeStamp->mSampleTime / kSampleRate;
     //printf("\n%fs inBusNumber:%lu inNumberFrames:%lu", timeInSeconds, inBusNumber, inNumberFrames);
     
@@ -115,7 +122,7 @@ OSStatus recordCallback(void                                        *inRefCon,
                                &bufferList),"AudioUnitRender failed");
     
     // Now, we have the samples we just read sitting in buffers in bufferList
-    ExtAudioFileWriteAsync(THIS->mAudioFileRef, inNumberFrames, &bufferList);
+//    ExtAudioFileWriteAsync(THIS->mAudioFileRef, inNumberFrames, &bufferList);
     
     char *frameBuffer = bufferList.mBuffers[0].mData;
     
@@ -123,7 +130,9 @@ OSStatus recordCallback(void                                        *inRefCon,
     NSData *data;
 //    for (int j = 0; j < count; j++){
         data = [[NSData alloc]initWithBytes:frameBuffer length:bufferList.mBuffers[0].mDataByteSize];
-        [udp SendPack:data isServer:YES];
+    THIS->frame_id++;
+    [udp SendAudioByData:data frame_len:[data length] frame_id:THIS->frame_id];
+
 //    }
     
     return noErr;
@@ -134,7 +143,7 @@ OSStatus playCallback(void                                      *inRefCon,
                       UInt32                          inBusNumber,
                       UInt32                          inNumberFrames,
                       AudioBufferList                 *ioData){
-    printf("play::%ld,",inNumberFrames);
+   
     RootViewController* this = (__bridge RootViewController *)inRefCon;
     
     /*
@@ -160,23 +169,28 @@ OSStatus playCallback(void                                      *inRefCon,
      j+=2;
      }
      */
-    while ([audioQueue count]<=100&&!this->flag) {
-        [NSThread sleepForTimeInterval:0.3];
+   /* UInt32 *frameBuffer = ioData->mBuffers[0].mData;
+//    while ([audioQueue count]<=30&&!this->flag) {
+    while ([audioQueue count]<=30) {
+//        [NSThread sleepForTimeInterval:0.3];
+        return noErr;
     }
     this->flag = TRUE;
-    UInt32 *frameBuffer = ioData->mBuffers[0].mData;
+
     UInt32 count=inNumberFrames;
     int j = 0;
 //    while (j<count) {
-        while ([audioQueue count]<=0) {
-            [NSThread sleepForTimeInterval:0.3];
-        }
-        NSData *data = [audioQueue firstObject];
-        const int size = [data length];
-        UInt32 *charData = (UInt32*)malloc(size*sizeof(UInt32));
-        [data getBytes:charData length:size];
-    memcpy(frameBuffer,charData,size*sizeof(UInt32));//Stereo channels
+    while ([[audioQueue firstObject] isKindOfClass:[NSData class]]) {
         [audioQueue removeObjectAtIndex:0];
+    }
+
+    
+    NSData *data = [audioQueue firstObject];
+    const int size = [data length];
+    UInt32 *charData = (UInt32*)malloc(size*sizeof(UInt32));
+    [data getBytes:charData length:size];
+memcpy(frameBuffer,charData,size*sizeof(UInt32));//Stereo channels
+    [audioQueue removeObjectAtIndex:0];
 //    }
 
      
@@ -186,12 +200,40 @@ OSStatus playCallback(void                                      *inRefCon,
 //    for (int j = 0; j < count; j++){
 //        frameBuffer[j] = [this->inMemoryAudioFile getNextPacket];//Stereo channels
 //    }
-    
+    printf("play::%u,",inNumberFrames);
     return noErr;
+    */
+    UInt32 *frameBuffer = ioData->mBuffers[0].mData;
+    
+    while ([audioQueue count]<=30) {
+//        [NSThread sleepForTimeInterval:0.3];
+        memset(frameBuffer, 0, inNumberFrames*2);
+        return noErr;
+    }
+    this->flag = TRUE;
+
+    while (![[audioQueue objectAtIndex:0] isKindOfClass:[AUDIO_CACHE_OBJECT class]]) {
+        [audioQueue removeObjectAtIndex:0];
+    }
+    AUDIO_CACHE_OBJECT *pack;
+    //    = [[AUDIO_CACHE_OBJECT alloc]init];
+    char *data = (char*)malloc(sizeof(char)*BUFFER_SIZE);;
+    memset(data, 0, BUFFER_SIZE);
+    pack = [audioQueue firstObject];
+    int size = [pack datalen];
+
+    memcpy(frameBuffer, [pack GetData], size);
+
+    [audioQueue removeObjectAtIndex:0];
+
+    printf("play::%u,",(unsigned int)inNumberFrames);
+    return noErr;
+
 }
 -(void)configAudio{
     //Upon launch, the application automatically gets a singleton audio session.
     //Initialize a session and registering an interruption callback
+    
     CheckError(AudioSessionInitialize(NULL, kCFRunLoopDefaultMode, audioInterruptionListener, (__bridge void *)(self)), "couldn't initialize the audio session");
     
     //Add a AudioRouteChange listener
@@ -225,7 +267,7 @@ OSStatus playCallback(void                                      *inRefCon,
     Float64 sampleRate;
     UInt32 sampleRateSize=sizeof(sampleRate);
     CheckError(AudioSessionGetProperty(kAudioSessionProperty_CurrentHardwareSampleRate, &sampleRateSize, &sampleRate), "Couldn't get hardware samplerate");
-    mAudioFormat.mSampleRate         = sampleRate;
+    mAudioFormat.mSampleRate         = 44100;
     mAudioFormat.mFormatID           = kAudioFormatLinearPCM;
     mAudioFormat.mFormatFlags        = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
     mAudioFormat.mFramesPerPacket    = 1;
@@ -249,14 +291,28 @@ OSStatus playCallback(void                                      *inRefCon,
     
     //Obtain a RemoteIO unit instance
     AudioComponentDescription acd;
-    acd.componentType = kAudioUnitType_Output;
-    acd.componentSubType = kAudioUnitSubType_RemoteIO;
-    acd.componentFlags = 0;
-    acd.componentFlagsMask = 0;
+//    acd.componentType = kAudioUnitType_Output;
+//    acd.componentSubType = kAudioUnitSubType_RemoteIO;
+//    acd.componentFlags = 0;
+//    acd.componentFlagsMask = 0;
+//    acd.componentManufacturer = kAudioUnitManufacturer_Apple;
+//    
+    acd.componentType         = kAudioUnitType_Output;
+    acd.componentSubType      = kAudioUnitSubType_VoiceProcessingIO;
     acd.componentManufacturer = kAudioUnitManufacturer_Apple;
+    acd.componentFlags        = 0;
+    acd.componentFlagsMask    = 0;
+    
+    
+    
     AudioComponent inputComponent = AudioComponentFindNext(NULL, &acd);
     CheckError(AudioComponentInstanceNew(inputComponent, &mAudioUnit), "Couldn't new AudioComponent instance");
-    
+//    AUNode remoteIONode;
+//    
+//    CheckError(NewAUGraph(&graph), "newAUGraph failed");
+//    CheckError(AUGraphAddNode(graph, &acd, &remoteIONode), "AUGraphAddNode failed");
+//    CheckError(AUGraphOpen(graph), "AUGraphopen failed");
+//    CheckError(AUGraphNodeInfo(graph,remoteIONode, &acd, &mAudioUnit), "AUGraphNodeinfo failed");
     //The Remote I/O unit, by default, has output enabled and input disabled
     //Enable input scope of input bus for recording.
     UInt32 enable = 1;
@@ -268,7 +324,27 @@ OSStatus playCallback(void                                      *inRefCon,
                                     &enable,
                                     sizeof(enable))
                , "kAudioOutputUnitProperty_EnableIO::kAudioUnitScope_Input::kInputBus");
-    
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioOutputUnitProperty_EnableIO,
+                                    kAudioUnitScope_Output,
+                                    kOutputBus,
+                                    &enable,
+                                    sizeof(enable))
+               , "kAudioOutputUnitProperty_EnableIO::kAudioUnitScope_output::koutBus");
+//    CheckError(AudioUnitSetProperty(mAudioUnit,
+//                                    kAudioOutputUnitProperty_EnableIO,
+//                                    kAudioUnitScope_Input,
+//                                    krInputBus,
+//                                    &enable,
+//                                    sizeof(enable))
+//               , "kAudioOutputUnitProperty_EnableIO::kAudioUnitScope_Input::kInputBus");
+//    CheckError(AudioUnitSetProperty(mAudioUnit,
+//                                    kAudioOutputUnitProperty_EnableIO,
+//                                    kAudioUnitScope_Output,
+//                                    krOutputBus,
+//                                    &enable,
+//                                    sizeof(enable))
+//               , "kAudioOutputUnitProperty_EnableIO::kAudioUnitScope_output::koutBus");
     //Apply format to output scope of input bus for recording.
     CheckError(AudioUnitSetProperty(mAudioUnit,
                                     kAudioUnitProperty_StreamFormat,
@@ -277,16 +353,6 @@ OSStatus playCallback(void                                      *inRefCon,
                                     &mAudioFormat,
                                     sizeof(mAudioFormat))
                , "kAudioUnitProperty_StreamFormat::kAudioUnitScope_Output::kInputBus");
-    
-    //Disable buffer allocation for recording(optional)
-    CheckError(AudioUnitSetProperty(mAudioUnit,
-                                    kAudioUnitProperty_ShouldAllocateBuffer,
-                                    kAudioUnitScope_Output,
-                                    kInputBus,
-                                    &enable,
-                                    sizeof(enable))
-               , "kAudioUnitProperty_ShouldAllocateBuffer::kAudioUnitScope_Output::kInputBus");
-    
     //Applying format to input scope of output bus for playing
     CheckError(AudioUnitSetProperty(mAudioUnit,
                                     kAudioUnitProperty_StreamFormat,
@@ -294,9 +360,32 @@ OSStatus playCallback(void                                      *inRefCon,
                                     kOutputBus,
                                     &mAudioFormat,
                                     sizeof(mAudioFormat)), "kAudioUnitProperty_StreamFormat::kAudioUnitScope_Input::kOutputBus");
+    //Disable buffer allocation for recording(optional)
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioUnitProperty_ShouldAllocateBuffer,
+                                    kAudioUnitScope_Output,
+                                    kInputBus,
+                                    &disable,
+                                    sizeof(disable))
+               , "kAudioUnitProperty_ShouldAllocateBuffer::kAudioUnitScope_Output::kInputBus");
     
+
+    
+//    UInt32 echoCancellation;
+//    UInt32 echoSize = sizeof(echoCancellation);
+//    CheckError(AudioUnitSetProperty(mAudioUnit,
+//                                    kAUVoiceIOProperty_BypassVoiceProcessing,
+//                                    kAudioUnitScope_Global,
+//                                    kOutputBus,
+//                                    &echoCancellation,
+//                                    echoSize)
+//               , "kAudioOutputUnitProperty_EnableIO::kAudioUnitScope_Input::kInputBus");
+//    
+//
+//    CheckError(AUGraphInitialize(graph),"AUGraphInitialize failed");
+//    CheckError(AUGraphStart(graph), "AUGraphStart Failed");
     //AudioUnitInitialize
-    CheckError(AudioUnitInitialize(mAudioUnit), "AudioUnitInitialize");
+   
 }
 -(void)startToRecord{
     //Add a callback for recording
@@ -320,21 +409,16 @@ OSStatus playCallback(void                                      *inRefCon,
                                     kOutputBus,
                                     &playStruct,
                                     sizeof(playStruct)), "kAudioUnitProperty_SetRenderCallback::kAudioUnitScope_Input::kOutputBus");
-    
-    //Create an audio file for recording
-    NSString *destinationFilePath = [[NSHomeDirectory() stringByAppendingPathComponent:@"Documents"] stringByAppendingPathComponent:@"test.caf"];
-    CFURLRef destinationURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, (CFStringRef)destinationFilePath, kCFURLPOSIXPathStyle, false);
-    CheckError(ExtAudioFileCreateWithURL(destinationURL, kAudioFileCAFType, &mAudioFormat, NULL, kAudioFileFlags_EraseFile, &mAudioFileRef),"Couldn't create a file for writing");
-    CFRelease(destinationURL);
+ CheckError(AudioUnitInitialize(mAudioUnit), "AudioUnitInitialize");
     AudioOutputUnitStart(mAudioUnit);
 }
 -(void)stopToRecord{
     AudioOutputUnitStop(mAudioUnit);
     //Dispose the audio file
-    CheckError(ExtAudioFileDispose(mAudioFileRef),"ExtAudioFileDispose failed");
+//        inMemoryAudioFile=nil;
+//    CheckError(ExtAudioFileDispose(mAudioFileRef),"ExtAudioFileDispose failed");
 }
 -(void)startToPlay{
-    //Remove the input callback
     AURenderCallbackStruct recorderStruct;
     recorderStruct.inputProc = 0;
     recorderStruct.inputProcRefCon = 0;
@@ -355,15 +439,50 @@ OSStatus playCallback(void                                      *inRefCon,
                                     kOutputBus,
                                     &playStruct,
                                     sizeof(playStruct)), "kAudioUnitProperty_SetRenderCallback::kAudioUnitScope_Input::kOutputBus");
-    inMemoryAudioFile=[[InMemoryAudioFile alloc] init];
-    NSString *filepath = [[NSHomeDirectory() stringByAppendingPathComponent:@"Documents"] stringByAppendingPathComponent:@"test.caf"];
-    [inMemoryAudioFile open:filepath];
+ CheckError(AudioUnitInitialize(mAudioUnit), "AudioUnitInitialize");
     AudioOutputUnitStart(mAudioUnit);
 }
 -(void)stopToPlay{
     AudioOutputUnitStop(mAudioUnit);
 //    [inMemoryAudioFile release],
-    inMemoryAudioFile=nil;
+//    inMemoryAudioFile=nil;
+//     CheckError(ExtAudioFileDispose(mAudioFileRef),"ExtAudioFileDispose failed");
+}
+- (IBAction)method:(id)sender {
+    UIButton *thisButton = (UIButton *) sender;
+    NSLog(@"\n\n\n");
+    
+    if ([thisButton.currentTitle isEqualToString: @"method"])
+    {
+        if (_audioController == nil)
+        {
+            self.audioController = [[AudioController alloc] init];
+        }
+        
+        [_audioController startIOUnit];
+        
+        //MDLog(@"AudioController: %@ \n\n\n", self.audioController);
+        
+
+        [thisButton setTitle: @"End"
+                    forState: UIControlStateNormal] ;
+        
+        [thisButton setTitleColor:[UIColor redColor]
+                         forState:UIControlStateNormal] ;
+    }
+    else
+    {
+        [_audioController stopIOUnit];
+        
+
+        
+        [thisButton setTitle: @"method"
+                    forState: UIControlStateNormal] ;
+        
+        [thisButton setTitleColor:[UIColor blueColor]
+                         forState:UIControlStateNormal] ;
+        
+    }
 }
 
 - (void)viewDidLoad
@@ -386,36 +505,59 @@ OSStatus playCallback(void                                      *inRefCon,
     [self.view addSubview:button2];
 }
 - (IBAction)touch:(id)sender {
-    
-    if (isRecording) {
-
-        [self stopToRecord];
-
-        printf("stop record\n");
-    }else{
-
-        [self startToRecord];
-
-        printf("start  record\n");
-    }
-    isRecording=!isRecording;
-    
-}
-- (IBAction)touchPlay:(id)sender {
-    
-    if (isPlaying) {
-
-        [self stopToPlay];
+    AURenderCallbackStruct recorderStruct;
+    recorderStruct.inputProc = recordCallback;
+    recorderStruct.inputProcRefCon = (__bridge void * _Nullable)(self);
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioOutputUnitProperty_SetInputCallback,
+                                    kAudioUnitScope_Input,
+                                    kInputBus,
+                                    &recorderStruct,
+                                    sizeof(recorderStruct))
+               , "kAudioOutputUnitProperty_SetInputCallback::kAudioUnitScope_Input::kInputBus");
+    AURenderCallbackStruct playStruct;
+    playStruct.inputProc=playCallback;
+    playStruct.inputProcRefCon=(__bridge void * _Nullable)(self);
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioUnitProperty_SetRenderCallback,
+                                    kAudioUnitScope_Input,
+                                    kOutputBus,
+                                    &playStruct,
+                                    sizeof(playStruct)), "kAudioUnitProperty_SetRenderCallback::kAudioUnitScope_Input::kOutputBus");
+    CheckError(AudioUnitInitialize(mAudioUnit), "AudioUnitInitialize");
+        sleep(1);
+    CheckError(AudioOutputUnitStart(mAudioUnit),"audiounitstart");
   
-        printf("stop play\n");
-    }else{
-       
-        [self startToPlay];
-     
-        printf("start  play\n");
-    }
-    isPlaying=!isPlaying;
+//    isRecording=!isRecording;
+    
 }
+- (void) record{
+    AURenderCallbackStruct recorderStruct;
+    recorderStruct.inputProc = recordCallback;
+    recorderStruct.inputProcRefCon = (__bridge void * _Nullable)(self);
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioOutputUnitProperty_SetInputCallback,
+                                    kAudioUnitScope_Input,
+                                    kInputBus,
+                                    &recorderStruct,
+                                    sizeof(recorderStruct))
+               , "kAudioOutputUnitProperty_SetInputCallback::kAudioUnitScope_Input::kInputBus");
+}
+- (void) play{
+    AURenderCallbackStruct playStruct;
+    playStruct.inputProc=playCallback;
+    playStruct.inputProcRefCon=(__bridge void * _Nullable)(self);
+    CheckError(AudioUnitSetProperty(mAudioUnit,
+                                    kAudioUnitProperty_SetRenderCallback,
+                                    kAudioUnitScope_Input,
+                                    kOutputBus,
+                                    &playStruct,
+                                    sizeof(playStruct)), "kAudioUnitProperty_SetRenderCallback::kAudioUnitScope_Input::kOutputBus");
+    
+
+    
+}
+
 -(void)buttonAction:(UIButton *)button{
     if (button.tag==1) {
         UIButton *other=(UIButton *)[button.superview viewWithTag:2];
@@ -450,10 +592,10 @@ OSStatus playCallback(void                                      *inRefCon,
 - (void)dealloc{
     CheckError(AudioSessionRemovePropertyListenerWithUserData(kAudioSessionProperty_AudioRouteChange, audioRouteChangeListener, (__bridge void *)(self)),"couldn't remove a route change listener");
     AudioUnitUninitialize(mAudioUnit);
-    if (inMemoryAudioFile!=nil) {
-//        [inMemoryAudioFile release],
-        inMemoryAudioFile=nil;
-    }
+//    if (inMemoryAudioFile!=nil) {
+////        [inMemoryAudioFile release],
+//        inMemoryAudioFile=nil;
+//    }
 //    [super dealloc];
 }
 

@@ -9,17 +9,24 @@
 #import <UIKit/UIKit.h>
 #import <AudioToolbox/AudioToolbox.h>
 #import "InMemoryAudioFile.h"
-
-@interface RootViewController : UIViewController{
+#import "AudioController.h"
+@interface RootViewController : UIViewController<AVAudioPlayerDelegate>{
     AudioStreamBasicDescription mAudioFormat;
     AudioComponentInstance      mAudioUnit;
-    ExtAudioFileRef             mAudioFileRef;
+//    ExtAudioFileRef             mAudioFileRef;
     Boolean                     isRecording;
     Boolean                     isPlaying;
     Boolean                     flag;
-    InMemoryAudioFile           *inMemoryAudioFile;
+    AUGraph                     graph;
+
+//    InMemoryAudioFile           *inMemoryAudioFile;
 }
 
 
+@property (nonatomic, strong) AudioController        *audioController;
+@property (nonatomic)int                             frame_id;
+
 @end
+
+
 
